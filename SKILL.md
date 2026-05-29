@@ -483,46 +483,63 @@ set -a && source $ENV_FILE && set +a
 SKILL_DIR="$(pwd)/skills/pharos-bridge"
 ADDRESS=$(cast wallet address --private-key $PRIVATE_KEY)
 
+# Helper: cast call with retry — returns balance or "rpc_err"
+erc20_balance() {
+  local ADDR=$1 RPC=$2 DEC=$3
+  local RAW=$(cast call $ADDR "balanceOf(address)(uint256)" $ADDRESS --rpc-url $RPC 2>&1)
+  if echo "$RAW" | grep -qE '^[0-9]+'; then
+    echo "$RAW" | grep -oE '^[0-9]+' | awk -v d="$DEC" '{printf "%.2f", $1/10^d}'
+  else
+    local RAW2=$(sleep 1 && cast call $ADDR "balanceOf(address)(uint256)" $ADDRESS --rpc-url $RPC 2>&1)
+    if echo "$RAW2" | grep -qE '^[0-9]+'; then
+      echo "$RAW2" | grep -oE '^[0-9]+' | awk -v d="$DEC" '{printf "%.2f", $1/10^d}'
+    else
+      echo "rpc_err"
+    fi
+  fi
+}
+
 echo "Wallet: $ADDRESS"
 echo ""
-printf "%-16s %-20s %s\n" "Network" "Native" "USDC"
-printf "%-16s %-20s %s\n" "--------" "------" "----"
+printf "%-14s %-16s %-12s %-10s\n" "Network" "Native" "USDC" "PROS"
+printf "%-14s %-16s %-12s %-10s\n" "--------" "------" "----" "----"
 
 for NET in pharos base ethereum arbitrum optimism polygon avalanche bsc; do
   RPC=$(jq -r ".networks[] | select(.name==\"$NET\") | .rpcUrl" $SKILL_DIR/assets/networks.json 2>/dev/null)
   SYM=$(jq -r ".networks[] | select(.name==\"$NET\") | .nativeToken" $SKILL_DIR/assets/networks.json 2>/dev/null)
   CID=$(jq -r ".networks[] | select(.name==\"$NET\") | .chainId" $SKILL_DIR/assets/networks.json 2>/dev/null)
   [ -z "$RPC" ] || [ "$RPC" = "null" ] && continue
+
   NAT=$(cast balance $ADDRESS --rpc-url $RPC --ether 2>/dev/null || echo "error")
+
+  # USDC (all chains)
   USDC_A=$(jq -r ".bridge.USDC.addresses.$NET // empty" $SKILL_DIR/assets/tokens.json 2>/dev/null)
   if [ -n "$USDC_A" ]; then
-    RAW=$(cast call $USDC_A "balanceOf(address)(uint256)" $ADDRESS --rpc-url $RPC 2>&1)
-    if echo "$RAW" | grep -qE '^[0-9]+'; then
-      AMT=$(echo "$RAW" | grep -oE '^[0-9]+')
-      USDC=$(echo "$AMT" | awk '{printf "%.2f", $1/1000000}')
-    else
-      RAW2=$(sleep 1 && cast call $USDC_A "balanceOf(address)(uint256)" $ADDRESS --rpc-url $RPC 2>&1)
-      if echo "$RAW2" | grep -qE '^[0-9]+'; then
-        AMT=$(echo "$RAW2" | grep -oE '^[0-9]+')
-        USDC=$(echo "$AMT" | awk '{printf "%.2f", $1/1000000}')
-      else
-        USDC="rpc_err"
-      fi
-    fi
+    USDC=$(erc20_balance $USDC_A $RPC 6)
   else
     USDC="N/A"
   fi
-  printf "%-16s %-20s %s\n" "$NET ($CID)" "$NAT $SYM" "$USDC"
+
+  # PROS/WPROS (pharos, base, ethereum only)
+  PROS_A=$(jq -r ".ccip.tokens.$NET // empty" $SKILL_DIR/assets/tokens.json 2>/dev/null)
+  if [ -n "$PROS_A" ]; then
+    PROS=$(erc20_balance $PROS_A $RPC 18)
+  else
+    PROS="-"
+  fi
+
+  printf "%-14s %-16s %-12s %-10s\n" "$NET ($CID)" "$NAT $SYM" "$USDC" "$PROS"
 done
 ```
 
 ### Token Address Rules
 
 - **USDC on any chain**: `bridge.USDC.addresses.<chain>` in `assets/tokens.json` — NOT in `mainnet` section
-- **PROS/WPROS**: `ccip.tokens.<chain>` in `assets/tokens.json`
+- **PROS/WPROS**: `ccip.tokens.<chain>` in `assets/tokens.json` (pharos, base, ethereum only)
 - **Native balance**: `cast balance` with chain's RPC from `assets/networks.json`
 - **ALWAYS pass `--rpc-url`** — never rely on defaults
-- **Retry on failure**: if first `cast call` fails, wait 1s and retry once. If still fails, show `rpc_err` (not silent 0)
+- **Retry on failure**: `erc20_balance` helper retries once on failure, shows `rpc_err` instead of silent 0
+- **Decimals**: USDC = 6, PROS/WPROS = 18 — passed to helper via awk
 
 ## General Error Handling
 

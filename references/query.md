@@ -443,10 +443,25 @@ set -a && source $ENV_FILE && set +a
 SKILL_DIR="$(pwd)/skills/pharos-bridge"
 ADDRESS=$(cast wallet address --private-key $PRIVATE_KEY)
 
+erc20_balance() {
+  local ADDR=$1 RPC=$2 DEC=$3
+  local RAW=$(cast call $ADDR "balanceOf(address)(uint256)" $ADDRESS --rpc-url $RPC 2>&1)
+  if echo "$RAW" | grep -qE '^[0-9]+'; then
+    echo "$RAW" | grep -oE '^[0-9]+' | awk -v d="$DEC" '{printf "%.2f", $1/10^d}'
+  else
+    local RAW2=$(sleep 1 && cast call $ADDR "balanceOf(address)(uint256)" $ADDRESS --rpc-url $RPC 2>&1)
+    if echo "$RAW2" | grep -qE '^[0-9]+'; then
+      echo "$RAW2" | grep -oE '^[0-9]+' | awk -v d="$DEC" '{printf "%.2f", $1/10^d}'
+    else
+      echo "rpc_err"
+    fi
+  fi
+}
+
 echo "Wallet: $ADDRESS"
 echo ""
-printf "%-16s %-20s %s\n" "Network" "Native" "USDC"
-printf "%-16s %-20s %s\n" "--------" "------" "----"
+printf "%-14s %-16s %-12s %-10s\n" "Network" "Native" "USDC" "PROS"
+printf "%-14s %-16s %-12s %-10s\n" "--------" "------" "----" "----"
 
 for NET in pharos base ethereum arbitrum optimism polygon avalanche bsc; do
   RPC=$(jq -r ".networks[] | select(.name==\"$NET\") | .rpcUrl" $SKILL_DIR/assets/networks.json 2>/dev/null)
@@ -455,24 +470,10 @@ for NET in pharos base ethereum arbitrum optimism polygon avalanche bsc; do
   [ -z "$RPC" ] || [ "$RPC" = "null" ] && continue
   NAT=$(cast balance $ADDRESS --rpc-url $RPC --ether 2>/dev/null || echo "error")
   USDC_A=$(jq -r ".bridge.USDC.addresses.$NET // empty" $SKILL_DIR/assets/tokens.json 2>/dev/null)
-  if [ -n "$USDC_A" ]; then
-    RAW=$(cast call $USDC_A "balanceOf(address)(uint256)" $ADDRESS --rpc-url $RPC 2>&1)
-    if echo "$RAW" | grep -qE '^[0-9]+'; then
-      AMT=$(echo "$RAW" | grep -oE '^[0-9]+')
-      USDC=$(echo "$AMT" | awk '{printf "%.2f", $1/1000000}')
-    else
-      RAW2=$(sleep 1 && cast call $USDC_A "balanceOf(address)(uint256)" $ADDRESS --rpc-url $RPC 2>&1)
-      if echo "$RAW2" | grep -qE '^[0-9]+'; then
-        AMT=$(echo "$RAW2" | grep -oE '^[0-9]+')
-        USDC=$(echo "$AMT" | awk '{printf "%.2f", $1/1000000}')
-      else
-        USDC="rpc_err"
-      fi
-    fi
-  else
-    USDC="N/A"
-  fi
-  printf "%-16s %-20s %s\n" "$NET ($CID)" "$NAT $SYM" "$USDC"
+  [ -n "$USDC_A" ] && USDC=$(erc20_balance $USDC_A $RPC 6) || USDC="N/A"
+  PROS_A=$(jq -r ".ccip.tokens.$NET // empty" $SKILL_DIR/assets/tokens.json 2>/dev/null)
+  [ -n "$PROS_A" ] && PROS=$(erc20_balance $PROS_A $RPC 18) || PROS="-"
+  printf "%-14s %-16s %-12s %-10s\n" "$NET ($CID)" "$NAT $SYM" "$USDC" "$PROS"
 done
 ```
 
