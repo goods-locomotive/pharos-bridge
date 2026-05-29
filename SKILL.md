@@ -496,8 +496,19 @@ for NET in pharos base ethereum arbitrum optimism polygon avalanche bsc; do
   NAT=$(cast balance $ADDRESS --rpc-url $RPC --ether 2>/dev/null || echo "error")
   USDC_A=$(jq -r ".bridge.USDC.addresses.$NET // empty" $SKILL_DIR/assets/tokens.json 2>/dev/null)
   if [ -n "$USDC_A" ]; then
-    RAW=$(cast call $USDC_A "balanceOf(address)(uint256)" $ADDRESS --rpc-url $RPC 2>/dev/null || echo "0")
-    USDC=$(echo "$RAW" | awk '{printf "%.2f", $1/1000000}')
+    RAW=$(cast call $USDC_A "balanceOf(address)(uint256)" $ADDRESS --rpc-url $RPC 2>&1)
+    if echo "$RAW" | grep -qE '^[0-9]+'; then
+      AMT=$(echo "$RAW" | grep -oE '^[0-9]+')
+      USDC=$(echo "$AMT" | awk '{printf "%.2f", $1/1000000}')
+    else
+      RAW2=$(sleep 1 && cast call $USDC_A "balanceOf(address)(uint256)" $ADDRESS --rpc-url $RPC 2>&1)
+      if echo "$RAW2" | grep -qE '^[0-9]+'; then
+        AMT=$(echo "$RAW2" | grep -oE '^[0-9]+')
+        USDC=$(echo "$AMT" | awk '{printf "%.2f", $1/1000000}')
+      else
+        USDC="rpc_err"
+      fi
+    fi
   else
     USDC="N/A"
   fi
@@ -511,7 +522,7 @@ done
 - **PROS/WPROS**: `ccip.tokens.<chain>` in `assets/tokens.json`
 - **Native balance**: `cast balance` with chain's RPC from `assets/networks.json`
 - **ALWAYS pass `--rpc-url`** — never rely on defaults
-- **Handle errors**: `2>/dev/null || echo '0'` — one failed query must not break the rest
+- **Retry on failure**: if first `cast call` fails, wait 1s and retry once. If still fails, show `rpc_err` (not silent 0)
 
 ## General Error Handling
 
