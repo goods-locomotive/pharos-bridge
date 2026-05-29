@@ -1,14 +1,6 @@
 {
   "networks": [
     {
-      "name": "atlantic-testnet",
-      "rpcUrl": "https://atlantic.dplabs-internal.com",
-      "chainId": 688689,
-      "explorerUrl": "https://atlantic.pharosscan.xyz/",
-      "explorerApiUrl": "https://api.socialscan.io/pharos-atlantic-testnet",
-      "nativeToken": "PHRS"
-    },
-    {
       "name": "pharos",
       "rpcUrl": "https://rpc.pharos.xyz",
       "chainId": 1672,

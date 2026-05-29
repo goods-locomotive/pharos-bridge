@@ -2,7 +2,7 @@
 
 This file contains detailed instructions for all transaction operations on the Pharos chain, covering sending transactions (native transfers and contract write calls) and Gas estimation.
 
-> **Network Configuration**: The `<rpc>` parameter in all commands is read from the corresponding network's `rpcUrl` field in `assets/networks.json`. Defaults to the Atlantic testnet.
+> **Network Configuration**: The `<rpc>` parameter in all commands is read from the corresponding network's `rpcUrl` field in `assets/networks.json`. Defaults to Pharos mainnet.
 >
 > **Private Key Configuration**: All write operations must explicitly pass the private key via the `--private-key` parameter. Recommended to use environment variable: `--private-key $PRIVATE_KEY`. `cast` does not automatically read environment variables; they must be explicitly referenced in the command.
 
@@ -50,7 +50,7 @@ cast send <to> --value <amount>ether --private-key <key> --rpc-url <rpc>
 | `invalid address` | Invalid recipient address format | Prompt user to check address format (`0x` + 40 hex characters) |
 | Connection timeout / `connection refused` | RPC node unreachable | Check network connection and RPC URL |
 
-> **Agent Guidelines**: Complete the "Write Operation Pre-checks" (see SKILL.md) before execution, which includes the network confirmation step — must clearly inform the user of the target network (testnet or mainnet). Automatically query sender balance via `cast balance <sender> --rpc-url <rpc>` and confirm balance ≥ transfer amount + estimated Gas fees. If balance is insufficient, inform the user directly without executing the transaction. After sending, display the transaction hash, status, and include a block explorer transaction link: `<explorerUrl>/tx/<transactionHash>`.
+> **Agent Guidelines**: Complete the "Write Operation Pre-checks" (see SKILL.md) before execution, which includes the network confirmation step — must clearly inform the user of the target network. Automatically query sender balance via `cast balance <sender> --rpc-url <rpc>` and confirm balance ≥ transfer amount + estimated Gas fees. If balance is insufficient, inform the user directly without executing the transaction. After sending, display the transaction hash, status, and include a block explorer transaction link: `<explorerUrl>/tx/<transactionHash>`.
 
 ---
 

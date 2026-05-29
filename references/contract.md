@@ -2,7 +2,7 @@
 
 This file contains detailed instructions for all contract operations on the Pharos chain, covering contract deployment, contract verification, and ERC20 one-click deployment.
 
-> **Network Configuration**: The `<rpc>` parameter in all commands is read from the corresponding network's `rpcUrl` field in `assets/networks.json`. Defaults to the Atlantic testnet. **The `--rpc-url` parameter must be explicitly passed**, otherwise `forge` / `cast` will default to connecting to `localhost:8545`, causing connection failure.
+> **Network Configuration**: The `<rpc>` parameter in all commands is read from the corresponding network's `rpcUrl` field in `assets/networks.json`. Defaults to Pharos mainnet. **The `--rpc-url` parameter must be explicitly passed**, otherwise `forge` / `cast` will default to connecting to `localhost:8545`, causing connection failure.
 >
 > **Private Key Configuration**: All write operations must explicitly pass the private key via the `--private-key` parameter. Recommended to use environment variable: `--private-key $PRIVATE_KEY`. `forge` / `cast` do not automatically read environment variables; they must be explicitly referenced in the command.
 
@@ -184,8 +184,7 @@ forge verify-contract <address> <path>:<ContractName> \
 
 | Network | chain_id | explorer_api_url |
 |---------|----------|-----------------|
-| Atlantic Testnet | `688689` | `https://api.socialscan.io/pharos-atlantic-testnet` |
-| Mainnet | `1672` | `https://api.socialscan.io/pharos-mainnet` |
+| Pharos Mainnet | `1672` | `https://api.socialscan.io/pharos-mainnet` |
 
 **Output Parsing**
 
@@ -258,7 +257,7 @@ forge script script/DeployStandardERC20.s.sol:DeployStandardERC20 \
 
 ```bash
 forge script script/DeployStandardERC20.s.sol:DeployStandardERC20 \
-  --rpc-url https://atlantic.dplabs-internal.com \
+  --rpc-url https://rpc.pharos.xyz \
   --private-key $PRIVATE_KEY \
   --broadcast \
   --skip-simulation
@@ -312,7 +311,7 @@ forge verify-contract <deployed_address> src/erc20/StandardERC20.sol:StandardERC
 ```bash
 forge verify-contract 0x1234...abcd src/erc20/StandardERC20.sol:StandardERC20 \
   --chain-id 688689 \
-  --verifier-url https://api.socialscan.io/pharos-atlantic-testnet/v1/explorer/command_api/contract \
+  --verifier-url https://api.socialscan.io/pharos-mainnet/v1/explorer/command_api/contract \
   --verifier blockscout \
   --constructor-args $(cast abi-encode "constructor(string,string,uint8,uint256)" "Akio Token" "ATOKEN" 6 100)
 ```

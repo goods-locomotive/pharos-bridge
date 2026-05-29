@@ -277,14 +277,24 @@ Load the corresponding reference file based on user needs:
 
 1. **Parse request** — identify: amount, source chain, destination chain
 2. **Validate route** — check supported chains (Pharos↔Base, Pharos↔Ethereum)
-3. **Read configs** — load CCIP routers, selectors, token pools from `assets/tokens.json` (ccip section)
-4. **Pre-checks** (silent) — source .env, verify key, derive address, check balances
-5. **Wrap** — if sending FROM Pharos: deposit() PROS → WPROS
-6. **Approve** — approve WPROS/PROS to CCIP Router
-7. **Estimate fee** — getFee() to determine ccipSend value
-8. **Send** — ccipSend with CCIP chain selector (NOT chain ID)
-9. **Report** — source tx hash, CCIP message ID, link to CCIP Explorer
-10. **Unwrap** (optional) — if receiving ON Pharos: withdraw() WPROS → native PROS
+3. **Read configs** — load CCIP routers, selectors, token pools from `assets/tokens.json` (ccip section). **ALL addresses MUST be lowercased for tuple encoding**: `jq ... | tr '[:upper:]' '[:lower:]'`
+4. **Verify network** — `cast chain-id --rpc-url $RPC` must match expected chain ID from networks.json. This prevents sending to testnet by mistake
+5. **Pre-checks** (silent) — source .env, verify key, derive address, check balances
+6. **Wrap** — if sending FROM Pharos: deposit() PROS → WPROS
+7. **Approve** — approve WPROS/PROS to CCIP Router
+8. **Estimate fee** — getFee() to determine ccipSend value
+9. **Send** — `ccipSend(uint64,(bytes,bytes,(address,uint256)[],address,bytes))` with CCIP chain selector (NOT chain ID). Receiver = `0x000000000000000000000000${ADDRESS:2}`
+10. **Report** — source tx hash, CCIP message ID, link to CCIP Explorer
+11. **Unwrap** (optional) — if receiving ON Pharos: withdraw() WPROS → native PROS
+
+### CCIP Common Pitfalls (CRITICAL)
+
+- `cast call` returns DECIMAL — never use `$((16#...))` hex conversion on balance output
+- Addresses in cast tuples MUST be lowercase — mixed case causes `odd number of digits`
+- ccipSend has exactly 2 params: `uint64` + EVM2AnyMessage tuple (6 fields)
+- Receiver address must be bytes32: `0x000000000000000000000000${ADDRESS:2}`
+- ALWAYS read RPC from `assets/networks.json` — never guess or use hardcoded RPCs
+- Verify chain ID before sending: `cast chain-id --rpc-url $RPC` must match expected value
 
 ### CCTP Domain IDs (CRITICAL — NOT Chain IDs)
 
@@ -407,7 +417,6 @@ CCTP_DOMAIN=$(jq -r '.networks[] | select(.name=="pharos") | .cctpDomain' assets
 ```
 
 - **Default Network**: Pharos Pacific Mainnet (`pharos`, chain ID 1672). Used when the user does not specify a network.
-- **Testnet**: Only use Atlantic testnet (`atlantic-testnet`) when the user explicitly mentions "testnet", "atlantic", or "test tokens".
 - **Switching Networks**: When the user specifies a network by name, read the corresponding entry's `rpcUrl` and `cctpDomain` from `assets/networks.json`.
 - For bridge operations, use the source chain's RPC URL for burn, destination chain's RPC URL for mint.
 
@@ -421,7 +430,7 @@ TOKEN=$(jq -r '.bridge.USDC.addresses.base' assets/tokens.json)
 
 ### USDC Addresses Per Chain (Balance Queries)
 
-For balance queries across chains, USDC addresses are in `bridge.USDC.addresses.<chain>` — **NOT** in the `mainnet` or `atlantic-testnet` top-level sections (those only contain Pharos-local tokens).
+For balance queries across chains, USDC addresses are in `bridge.USDC.addresses.<chain>` — **NOT** in the `mainnet` top-level section (that only contains Pharos-local tokens).
 
 ```bash
 # USDC on any chain — use bridge section
@@ -561,6 +570,10 @@ Before executing commands, the Agent should perform pre-checks; when commands fa
 | Unsupported route | Chain not in supported table | Inform user of supported chains |
 | Private key not configured | Missing `--private-key` | Prompt user to configure private key |
 | Nonce conflict | `nonce too low` | Wait or manually specify nonce |
+| Hex conversion on decimal | `16#: invalid integer constant` | `cast call` returns decimal — use directly, no `$((16#...))` |
+| Wrong ccipSend params | `encode length mismatch` | Use exact: `ccipSend(uint64,(bytes,bytes,(address,uint256)[],address,bytes))` |
+| Mixed-case address in tuple | `odd number of digits` | Lowercase all addresses: `jq ... \| tr '[:upper:]' '[:lower:]'` |
+| Wrong network (testnet vs mainnet) | Tx on wrong explorer | Always `cast chain-id --rpc-url $RPC` and verify against networks.json |
 | Missing network config | `assets/networks.json` unreadable | Config file missing or invalid format |
 
 ## Security Reminders

@@ -2,9 +2,9 @@
 
 This file contains detailed instructions for all query operations on the Pharos chain, covering balance queries, transaction queries, and contract read-only calls.
 
-> **Network Configuration**: The `<rpc>` parameter in all commands is read from the corresponding network's `rpcUrl` field in `assets/networks.json`. Defaults to the Atlantic testnet.
+> **Network Configuration**: The `<rpc>` parameter in all commands is read from the corresponding network's `rpcUrl` field in `assets/networks.json`. Defaults to Pharos mainnet.
 >
-> **Native Token Symbol**: Read the native token symbol from the current network's `nativeToken` field in `assets/networks.json` (e.g., `PHRS` for Atlantic testnet, `PROS` for mainnet), and use this symbol instead of the generic "ether" when displaying balances.
+> **Native Token Symbol**: Read the native token symbol from the current network's `nativeToken` field in `assets/networks.json` (e.g., `PROS` for Pharos mainnet, `ETH` for Base/Ethereum), and use this symbol instead of the generic "ether" when displaying balances.
 
 ---
 
@@ -28,7 +28,7 @@ cast balance <address> --rpc-url <rpc>
 **Output Parsing**
 
 - Command outputs a decimal number string in wei
-- Example output: `1000000000000000000` (i.e., 1 PHRS on Atlantic testnet)
+- Example output: `1000000000000000000` (i.e., 1 PROS on Pharos mainnet)
 - Use the `nativeToken` field from the current network in `assets/networks.json` as the token symbol when displaying
 
 **Error Handling**
@@ -59,13 +59,13 @@ cast balance <address> --rpc-url <rpc> --ether
 
 - Command outputs a decimal number string in ether (the standard unit of the native token)
 - Example output: `1.000000000000000000`
-- Display using the current network's native token symbol, e.g., `1.0 PHRS` (Atlantic testnet) or `1.0 PROS` (mainnet)
+- Display using the current network's native token symbol, e.g., `1.0 PROS` (Pharos) or `1.0 ETH` (Base)
 
 **Error Handling**
 
 Same as "Native Token Balance (wei)".
 
-> **Agent Guidelines**: When querying native balance, first read the `nativeToken` field from `assets/networks.json` to get the token symbol. When displaying results, always clearly state the target network (e.g., "Results from Atlantic testnet" or "Results from mainnet"). Execute both wei and ether commands and display both values using the correct token symbol (e.g., `1.0 PHRS` instead of `1.0 ether`). Also include a block explorer address link: `<explorerUrl>/address/<address>`.
+> **Agent Guidelines**: When querying native balance, first read the `nativeToken` field from `assets/networks.json` to get the token symbol. When displaying results, always clearly state the target network (e.g., "Results from Pharos mainnet" or "Results from Base"). Execute both wei and ether commands and display both values using the correct token symbol (e.g., `1.0 PROS` instead of `1.0 ether`). Also include a block explorer address link: `<explorerUrl>/address/<address>`.
 
 ---
 
@@ -155,7 +155,7 @@ cast call <token> "decimals()(uint8)" --rpc-url <rpc>
 | Empty return value | No contract code at target address | Prompt user to confirm token contract address |
 | `execution reverted` | Contract does not support `decimals()` method | Prompt that target contract may not be a standard ERC20 |
 
-> **Agent Guidelines**: When querying ERC20 balance, first check the token list for the current network in `assets/tokens.json` to see if the user's token symbol matches a known token. If matched, use its `address` and `decimals` directly without calling on-chain `decimals()` and `symbol()`. If the user provides a token contract address directly (even for unknown tokens), use it to call `decimals()`, `symbol()`, and `balanceOf(address)` in sequence, then convert the raw balance to human-readable format: `balance = rawBalance / 10^decimals`, displayed with the token symbol. **If the token is not in `assets/tokens.json` AND the user did not provide a contract address: do NOT search the web or attempt to fetch the explorer page (the explorer has browser checks that block automated access).** Instead, immediately direct the user to find the token contract address themselves on the block explorer token list page: `<explorerUrl>/tokens` (read `explorerUrl` from `assets/networks.json` for the current network). Example response: "AWETH is not in the known token list. You can find its contract address at https://atlantic.pharosscan.xyz/tokens — once you have the address, share it with me and I'll query the balance for you." Also include block explorer links: holder address `<explorerUrl>/address/<holder>`, token contract `<explorerUrl>/address/<token>`.
+> **Agent Guidelines**: When querying ERC20 balance, first check the token list for the current network in `assets/tokens.json` to see if the user's token symbol matches a known token. If matched, use its `address` and `decimals` directly without calling on-chain `decimals()` and `symbol()`. If the user provides a token contract address directly (even for unknown tokens), use it to call `decimals()`, `symbol()`, and `balanceOf(address)` in sequence, then convert the raw balance to human-readable format: `balance = rawBalance / 10^decimals`, displayed with the token symbol. **If the token is not in `assets/tokens.json` AND the user did not provide a contract address: do NOT search the web or attempt to fetch the explorer page (the explorer has browser checks that block automated access).** Instead, immediately direct the user to find the token contract address themselves on the block explorer token list page: `<explorerUrl>/tokens` (read `explorerUrl` from `assets/networks.json` for the current network). Also include block explorer links: holder address `<explorerUrl>/address/<holder>`, token contract `<explorerUrl>/address/<token>`.
 
 ---
 
@@ -329,8 +329,7 @@ When querying ERC20 balances, use the correct section of `assets/tokens.json`:
 | WPROS | Pharos | `.ccip.tokens.pharos` |
 | PROS | Base | `.ccip.tokens.base` |
 | PROS | Ethereum | `.ccip.tokens.ethereum` |
-| WETH, LINK, WBTC, WPHRS | Pharos only | `.mainnet[] \| select(.symbol=="WETH") \| .address` |
-| Testnet tokens | Atlantic | `.atlantic-testnet[] \| select(.symbol==...) \| .address` |
+| WETH, LINK | Pharos only | `.mainnet[] \| select(.symbol=="WETH") \| .address` |
 
 **IMPORTANT**: The `mainnet` top-level section only contains **Pharos-local tokens**. For USDC on other chains (Base, Ethereum, Arbitrum, etc.), use `bridge.USDC.addresses.<chain>`. Do NOT look for USDC in `mainnet`.
 
@@ -379,11 +378,11 @@ Present results in a clear table format:
 
 ```
 Wallet Portfolio for 0x1234...abcd
-Network: Atlantic Testnet (atlantic-testnet)
+Network: Pharos Mainnet (pharos)
 
 | Token  | Balance          |
 |--------|------------------|
-| PHRS   | 12.5             |
+| PROS   | 12.5             |
 | USDC   | 1,000.00         |
 | WETH   | 0.25             |
 
