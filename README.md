@@ -1,4 +1,4 @@
-# pharos-bridge
+# Native Pharos Bridge via Circle CCTP & Chainlink CCIP
 
 **Direct-protocol bridge for Pharos Network — no aggregators, no wrappers, no middlemen.**
 
@@ -7,10 +7,8 @@
 Most bridge skills route through aggregators like Jumper or LI.FI. That sounds convenient — until you realize what it costs:
 
 - **Extra fees** — aggregator fee on top of protocol fee on top of gas
-- **Wrapped tokens** — you don't get native USDC, you get a wrapped version that needs unwrapping
 - **Opaque routing** — your tokens hop through intermediate chains you didn't choose
 - **Single point of failure** — if the aggregator is down, your bridge is down
-- **PROS? Forget it** — aggregators don't support Pharos-native tokens
 
 ## Our Approach: Direct Protocol Calls
 
@@ -18,11 +16,11 @@ Most bridge skills route through aggregators like Jumper or LI.FI. That sounds c
 
 | | Aggregator Bridge | pharos-bridge |
 |---|---|---|
-| **USDC** | Routed through intermediary, may be wrapped | Circle CCTP V2 — native 1:1 burn-and-mint |
-| **PROS** | Not supported | Chainlink CCIP — direct Router, Lock/Release + Burn/Mint |
+| **USDC** | Routed through intermediary | Circle CCTP V2 — native 1:1 burn-and-mint |
+| **PROS** | Not supported by aggregators | Chainlink CCIP — direct Router, Lock/Release + Burn/Mint |
 | **Fees** | Aggregator fee + protocol fee + gas | Protocol fee + gas only |
 | **Speed** | Extra routing hops add latency | CCTP Fast Transfer: sub-minute. CCIP: 5-20 min |
-| **Tokens** | May receive wrapped USDC | Native USDC on every chain — always 1:1 |
+| **Tokens** | May route through wrapped versions | Native USDC on every chain — always 1:1 |
 | **Reliability** | Depends on aggregator uptime | Depends on Circle/Chainlink — battle-tested infrastructure |
 | **Transparency** | Opaque routing, hard to trace | Every step verifiable on-chain with direct tx hashes |
 | **Chains** | Whatever the aggregator supports | 8 chains for USDC, 3 chains for PROS |
@@ -90,19 +88,25 @@ Install skill from https://github.com/goods-locomotive/pharos-bridge
 
 The agent will clone the repo and set up the skill automatically.
 
-### Option 2: NPX
+### Option 2: Skills CLI (npx / pnpm / bunx)
 
 ```bash
-npx @anthropic-ai/clauth install-skill https://github.com/goods-locomotive/pharos-bridge
+npx skills add https://github.com/goods-locomotive/pharos-bridge
+```
+
+Or with pnpm / bunx:
+
+```bash
+pnpm dlx skills add https://github.com/goods-locomotive/pharos-bridge
+bunx skills add https://github.com/goods-locomotive/pharos-bridge
 ```
 
 ### Option 3: Manual
 
-Clone the repository and copy the skill folder:
+Clone the repository to your skills directory:
 
 ```bash
-git clone https://github.com/goods-locomotive/pharos-bridge.git
-cp -r pharos-bridge ~/.claude/skills/pharos-bridge
+git clone https://github.com/goods-locomotive/pharos-bridge.git ~/.claude/skills/pharos-bridge
 ```
 
 All skill files are in the repository root — `SKILL.md`, `assets/`, `references/`.
